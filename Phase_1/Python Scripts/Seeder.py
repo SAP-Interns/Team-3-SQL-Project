@@ -48,10 +48,18 @@ def final_master_seed():
     date_buffer = []
     while curr <= end:
         iso_w = curr.isocalendar()[1]
-        date_buffer.append((curr, curr.year, (curr.month-1)//3+1, curr.month, curr.strftime('%B'), 
+        
+        # Calculate DateKey in YYYYMMDD format
+        date_key = int(curr.strftime('%Y%m%d'))
+        
+        # Appending FullDate as a standard date object (maps perfectly to datetime in SQL Server)
+        date_buffer.append((date_key, curr, curr.year, (curr.month-1)//3+1, curr.month, curr.strftime('%B'), 
                             52 if iso_w > 52 else iso_w, curr.isoweekday(), curr.strftime('%A'), 1 if curr.isoweekday() <= 5 else 0))
         curr += timedelta(days=1)
-    cursor.executemany("INSERT INTO [Date] (FullDate, Year, Quarter, MonthNum, MonthName, WeekNum, DayOfWeek, DayName, IsBusinessDay) VALUES (?,?,?,?,?,?,?,?,?)", date_buffer)
+        
+    cursor.executemany("""
+        INSERT INTO [Date] (DateKey, FullDate, Year, Quarter, MonthNum, MonthName, WeekNum, DayOfWeek, DayName, IsBusinessDay) 
+        VALUES (?,?,?,?,?,?,?,?,?,?)""", date_buffer)
     
     cursor.executemany("INSERT INTO Region (Name) VALUES (?)", [('DACH',), ('Benelux',), ('Western Europe',)])
     cursor.executemany("INSERT INTO AccountTier (Name) VALUES (?)", [('Bronze',), ('Silver',), ('Gold',), ('Platinum',)])
@@ -75,10 +83,11 @@ def final_master_seed():
 
     # --- 4. STAFF (Reps) ---
     rep_start_date = date(2024, 1, 1)
+    start_date_key = int(rep_start_date.strftime('%Y%m%d'))
     cursor.execute("SELECT ID FROM Region")
     reg_ids = [r[0] for r in cursor.fetchall()]
     for _ in range(numOfSalesRep):
-        cursor.execute("INSERT INTO SalesRepresentative (Name, RegionID, StartingDate) VALUES (?, ?, ?)", (fake.name(), random.choice(reg_ids), rep_start_date))
+        cursor.execute("INSERT INTO SalesRepresentative (Name, RegionID,StartingDateKey, StartingDate) VALUES (?, ?, ?, ?)", (fake.name(), random.choice(reg_ids),start_date_key, rep_start_date))
         r_id = cursor.execute("SELECT @@IDENTITY").fetchone()[0]
         cursor.execute("INSERT INTO Quota (SalesRepresentativeID, TerritoryID, FiscalPeriod, TargetAmount) VALUES (?, ?, 'FY2026', ?)", (r_id, random.choice(t_ids), 750000))
     conn.commit()
@@ -111,9 +120,11 @@ def final_master_seed():
         if random.random() < 0.80:
             for r_id in random.sample(all_reps, random.randint(1, 2)):
                 assign_date = rep_start_date + timedelta(days=random.randint(0, 700))
+                assign_date_key = int(assign_date.strftime('%Y%m%d'))
+                
                 cursor.execute("""
-                    INSERT INTO Customer_SalesRepresentative (CustomerID, SalesRepresentativeID, AssignedDate) 
-                    VALUES (?, ?, ?)""", (c_id, r_id, assign_date))
+                    INSERT INTO Customer_SalesRepresentative (CustomerID, SalesRepresentativeID, AssignedDateKey, AssignedDate) 
+                    VALUES (?, ?, ?, ?)""", (c_id, r_id, assign_date_key, assign_date))
     conn.commit()
 
     # --- 7. PRODUCTS ---
@@ -136,7 +147,13 @@ def final_master_seed():
     ]
     promo_data = []
     for p_name, disc, start, end in promos:
-        cursor.execute("INSERT INTO Promotion (Name, DiscountPercentage, StartDate, EndDate) OUTPUT INSERTED.ID, INSERTED.DiscountPercentage, INSERTED.StartDate, INSERTED.EndDate VALUES (?, ?, ?, ?)", (p_name, disc, start, end))
+        start_date_key = int(start.strftime('%Y%m%d'))
+        end_date_key = int(end.strftime('%Y%m%d'))
+        
+        cursor.execute("""
+            INSERT INTO Promotion (Name, DiscountPercentage, StartDateKey, EndDateKey, StartDate, EndDate) 
+            OUTPUT INSERTED.ID, INSERTED.DiscountPercentage, INSERTED.StartDate, INSERTED.EndDate 
+            VALUES (?, ?, ?, ?, ?, ?)""", (p_name, disc, start_date_key, end_date_key, start, end))
         promo_data.append(cursor.fetchone())
 
     cursor.execute("SELECT ID FROM Product")
@@ -169,15 +186,18 @@ def final_master_seed():
     for i in range(1, numOfSales + 1):
         c_id, r_id = random.choice(pairs)
         o_date = date(2026, 3, 28) - timedelta(days=random.randint(0, 800))
+        o_date_key = int(o_date.strftime('%Y%m%d'))
+        
         chosen_status_id = random.choices(statuses, weights=weights, k=1)[0]
         
-        # Shipping Date Logic
+        # Shipping Date Logic (Using None when not delivered, mapping safely to NULL)
         ship_date = o_date + timedelta(days=random.randint(1, 20)) if chosen_status_id == status_map['Delivered'] else None
-
+        ship_date_key = int(ship_date.strftime('%Y%m%d')) if ship_date else None
+        
         cursor.execute("""
-            INSERT INTO SaleOrder (CustomerID, SalesRepresentativeID, OrderDate, PaymentTerm, SaleStatusID, ShippingDate) 
-            OUTPUT INSERTED.ID VALUES (?, ?, ?, 'Net 30', ?, ?)""", 
-            (c_id, r_id, o_date, chosen_status_id, ship_date))
+            INSERT INTO SaleOrder (CustomerID, SalesRepresentativeID, OrderDateKey, OrderDate, PaymentTerm, SaleStatusID, ShippingDateKey, ShippingDate) 
+            OUTPUT INSERTED.ID VALUES (?, ?, ?, ?, 'Net 30', ?, ?, ?)""", 
+            (c_id, r_id, o_date_key, o_date, chosen_status_id, ship_date_key, ship_date))
         o_id = cursor.fetchone()[0]
         
         for _ in range(2):
@@ -203,8 +223,11 @@ def final_master_seed():
             # Cancellation Logic -> Return record
             if chosen_status_id == status_map['Cancelled']:
                 ret_date = o_date + timedelta(days=random.randint(0, 2))
-                cursor.execute("INSERT INTO [Return] (OrderLineItemID, ReturnDate, ReturnReasonID) VALUES (?, ?, ?)", 
-                               (line_item_id, ret_date, reason_map['Not Satisfied']))
+                ret_date_key = int(ret_date.strftime('%Y%m%d'))
+                
+                cursor.execute("""
+                    INSERT INTO [Return] (OrderLineItemID, ReturnDateKey, ReturnDate, ReturnReasonID) 
+                    VALUES (?, ?, ?, ?)""", (line_item_id, ret_date_key, ret_date, reason_map['Not Satisfied']))
         
         if i % 2500 == 0:
             print(f"--- {i} orders processed...")

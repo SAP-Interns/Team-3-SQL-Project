@@ -1,4 +1,4 @@
-DECLARE @QueryNum INT = 5
+DECLARE @QueryNum INT = 4
 
 	IF @QueryNum = 1
 	BEGIN
@@ -23,7 +23,7 @@ DECLARE @QueryNum INT = 5
 		SUM(O.TotalPrice) AS TotalValue
 		FROM SaleOrder S
 		INNER JOIN SaleStatus SS ON SS.ID = S.SaleStatusID
-		INNER JOIN Date D ON CAST(D.FullDate AS DATE) = CAST(S.OrderDate AS DATE)
+		INNER JOIN Date D ON D.DateKey = S.OrderDateKey
 		INNER JOIN Customer C ON C.ID = S.CustomerID
 		INNER JOIN OrderLineItem O ON O.SaleOrderID = S.ID
 		WHERE SS.Name LIKE '%Pending%' AND D.Year = YEAR(GETDATE()) -1 AND D.Quarter = 3
@@ -56,7 +56,7 @@ DECLARE @QueryNum INT = 5
 			SELECT 
 			SalesRepresentativeID
 			FROM Customer_SalesRepresentative CS
-			INNER JOIN Date D ON CAST(D.FullDate AS DATE) = CAST(CS.AssignedDate AS DATE)
+			INNER JOIN Date D ON D.DateKey = CS.AssignedDateKey
 			WHERE D.FullDate >= DATEADD(month, -6, GETDATE())
 		)
 	END
