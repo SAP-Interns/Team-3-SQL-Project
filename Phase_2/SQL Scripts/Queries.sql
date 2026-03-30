@@ -1,4 +1,4 @@
-DECLARE @QueryNum INT = 3
+DECLARE @QueryNum INT = 5
 
 	IF @QueryNum = 1
 	BEGIN
@@ -55,11 +55,10 @@ DECLARE @QueryNum INT = 3
 	BEGIN
 		SELECT 
 		SP.Name AS SalesRepName,
-		C.Name AS CustomerName,
+		R.Name AS Region,
 		SP.StartingDate
 		FROM SalesRepresentative SP
 		INNER JOIN Region R ON R.ID = SP.RegionID
-		INNER JOIN Country C ON C.RegionID = R.ID
 		WHERE SP.ID NOT IN 
 		(
 			SELECT 
@@ -77,16 +76,17 @@ DECLARE @QueryNum INT = 3
 		SELECT 
 		C.Name AS Customer,
 		CC.Name AS Country,
-		P.Name AS Product,
-		O.TotalPrice,
+		SUM(O.TotalPrice) AS Price,
 		S.OrderDate,
-		S.ShippingDate 
+		S.ShippingDate,
+		DATEDIFF(DAY, S.OrderDate, S.ShippingDate) AS DateDifference
 		FROM SaleOrder S
 		INNER JOIN OrderLineItem O ON O.SaleOrderID = S.ID
 		INNER JOIN [Product] P ON P.ID = O.ProductID
 		INNER JOIN Customer C ON C.ID = S.CustomerID
 		INNER JOIN Country CC ON CC.ID = C.CountryID
 		WHERE DATEDIFF(DAY, S.OrderDate, S.ShippingDate) > @ShippingDateDifference AND CC.Name LIKE @Country
+		GROUP BY C.Name,CC.Name,S.OrderDate,S.ShippingDate
 	END
 
 	IF @QueryNum = 6
@@ -98,5 +98,5 @@ DECLARE @QueryNum INT = 3
 		P.ListingPrice,
 		P.Stock FROM Product P
 		INNER JOIN Category C ON C.ID = P.CategoryID
-		WHERE P.Name LIKE '%Pro' OR P.Name LIKE '%Max%' OR P.Name LIKE '%Ultra%'
+		WHERE P.Name LIKE '%Pro' OR P.Name LIKE '%Max%' OR P.Name LIKE '%Plus%'
 	END
