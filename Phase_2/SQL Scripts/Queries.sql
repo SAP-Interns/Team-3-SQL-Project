@@ -1,4 +1,4 @@
-DECLARE @QueryNum INT = 4
+DECLARE @QueryNum INT = 3
 
 	IF @QueryNum = 1
 	BEGIN
@@ -32,14 +32,23 @@ DECLARE @QueryNum INT = 4
 
 	IF @QueryNum = 3
 	BEGIN
-		SELECT 
+		SELECT
 		P.Name AS ProductName,
-		C.Name AS CustomerName,
+		C.Name AS CategoryName,
 		P.UnitCost,
-		P.ListingPrice
-		FROM Product P
+		P.ListingPrice,
+		CAST(ROUND(T.Margin, 2) AS NVARCHAR(50)) + '%' AS 'Gross Margin'
+		FROM
+		(
+			SELECT
+			P.ID,
+			(1-(P.UnitCost / P.ListingPrice)) * 100 AS Margin
+			FROM Product P
+		) AS T
+		INNER JOIN Product P ON P.ID = T.ID
 		INNER JOIN Category C ON C.ID = P.CategoryID
-		WHERE P.ListingPrice >= (3 * P.UnitCost)
+		WHERE T.Margin > 66
+		ORDER BY T.Margin DESC
 	END
 
 	IF @QueryNum = 4
