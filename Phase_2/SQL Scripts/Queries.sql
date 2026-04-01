@@ -1,4 +1,4 @@
-DECLARE @QueryNum INT = 5
+DECLARE @QueryNum INT = 6
 
 	IF @QueryNum = 1
 	BEGIN
@@ -85,7 +85,7 @@ DECLARE @QueryNum INT = 5
 		INNER JOIN [Product] P ON P.ID = O.ProductID
 		INNER JOIN Customer C ON C.ID = S.CustomerID
 		INNER JOIN Country CC ON CC.ID = C.CountryID
-		WHERE DATEDIFF(DAY, S.OrderDate, S.ShippingDate) > @ShippingDateDifference AND CC.Name LIKE @Country
+		WHERE S.ShippingDate > DATEADD(DAY, 14, S.OrderDate) AND CC.Name LIKE @Country
 		GROUP BY C.Name,CC.Name,S.OrderDate,S.ShippingDate
 	END
 
