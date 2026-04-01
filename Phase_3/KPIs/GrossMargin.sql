@@ -6,6 +6,6 @@ SELECT
     ROUND(((SUM(oli.TotalPrice) - SUM(oli.Quantity * p.UnitCost)) 
         / SUM(oli.TotalPrice)) * 100,2) AS GrossMarginPercent
 FROM OrderLineItem oli
-JOIN Product p ON oli.ProductID = p.ID
-JOIN Category cat ON p.CategoryID = cat.ID
+INNER JOIN Product p ON oli.ProductID = p.ID
+INNER JOIN Category cat ON p.CategoryID = cat.ID
 GROUP BY cat.Name;

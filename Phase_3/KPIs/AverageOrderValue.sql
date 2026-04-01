@@ -4,9 +4,9 @@ SELECT
     d.MonthNum,
     ROUND(SUM(oli.TotalPrice) / COUNT(DISTINCT so.ID),2) AS AvgOrderValue
 FROM SaleOrder so
-JOIN OrderLineItem oli ON so.ID = oli.SaleOrderID
-JOIN SalesRepresentative sr ON so.SalesRepresentativeID = sr.ID
-JOIN Region r ON sr.RegionID = r.ID
-JOIN Date d ON so.OrderDate = d.FullDate
+INNER JOIN OrderLineItem oli ON so.ID = oli.SaleOrderID
+INNER JOIN SalesRepresentative sr ON so.SalesRepresentativeID = sr.ID
+INNER JOIN Region r ON sr.RegionID = r.ID
+INNER JOIN Date d ON so.OrderDateKey = d.DateKey
 GROUP BY r.Name, d.MonthNum
 ORDER BY d.MonthNum;

@@ -4,8 +4,8 @@ SELECT
     ((SUM(oli.TotalPrice) - SUM(oli.Quantity * p.UnitCost)) / SUM(oli.TotalPrice)) * 100 AS Margin,
     (COUNT(r.ID) * 1.0 / SUM(oli.Quantity)) * 100 AS ReturnRate
 FROM OrderLineItem oli
-JOIN Product p ON oli.ProductID = p.ID
-JOIN Category cat ON p.CategoryID = cat.ID
+INNER JOIN Product p ON oli.ProductID = p.ID
+INNER JOIN Category cat ON p.CategoryID = cat.ID
 LEFT JOIN [Return] r ON oli.ID = r.OrderLineItemID
 GROUP BY cat.Name
 HAVING 
