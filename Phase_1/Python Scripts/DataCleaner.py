@@ -1,8 +1,4 @@
 import pyodbc
-from faker import Faker
-from datetime import date, timedelta
-
-fake = Faker(['de_DE'])
 
 # Connection
 conn = pyodbc.connect(
@@ -13,7 +9,7 @@ conn = pyodbc.connect(
 )
 cursor = conn.cursor()
 
-def full_seed():
+def clean():
     # --- STEP 1: CLEANUP ---
     print("Cleaning database...")
     cursor.execute("EXEC sp_MSforeachtable 'ALTER TABLE ? NOCHECK CONSTRAINT ALL'")
@@ -28,6 +24,6 @@ def full_seed():
     conn.commit()
     
 
-full_seed()
+clean()
 conn.close()
 print("Cleaned Sucessfully!")

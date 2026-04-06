@@ -89,7 +89,7 @@ def final_master_seed():
     for _ in range(numOfSalesRep):
         cursor.execute("INSERT INTO SalesRepresentative (Name, RegionID,StartingDateKey, StartingDate) VALUES (?, ?, ?, ?)", (fake.name(), random.choice(reg_ids),start_date_key, rep_start_date))
         r_id = cursor.execute("SELECT @@IDENTITY").fetchone()[0]
-        cursor.execute("INSERT INTO Quota (SalesRepresentativeID, TerritoryID, FiscalPeriod, TargetAmount) VALUES (?, ?, 'FY2026', ?)", (r_id, random.choice(t_ids), 750000))
+        cursor.execute("INSERT INTO Quota (SalesRepresentativeID, TerritoryID, FiscalPeriod, TargetAmount) VALUES (?, ?, 'FY2026', ?)", (r_id, random.choice(t_ids), random.randint(20000,750000)))
     conn.commit()
 
     # --- 5. CATEGORIES ---

@@ -1,6 +1,8 @@
-DECLARE @QueryNum INT = 5
+DECLARE @QueryNum INT = 6
 
 	IF @QueryNum = 1
+	/*List all customers in Germany whose account tier is Gold and whose credit limit exceeds
+	50,000, ordered by credit limit descending.*/
 	BEGIN
 		DECLARE @Tier NVARCHAR(50) = '%Gold%'
 		DECLARE @CreditLimit INT = 50000
@@ -16,6 +18,8 @@ DECLARE @QueryNum INT = 5
 	END
 
 	IF @QueryNum = 2
+	/*Retrieve all sales orders placed in Q3 of the most recent complete year that have a status of
+	Pending or Partially Delivered, showing the customer name, order date, and total value. */
 	BEGIN
 		SELECT 
 		C.Name AS CustomerName,
@@ -31,6 +35,8 @@ DECLARE @QueryNum INT = 5
 	END
 
 	IF @QueryNum = 3
+	/*Find all products whose list price is more than three times their unit cost (i.e., gross margin
+	above 66%), ordered by margin descending.*/
 	BEGIN
 		SELECT
 		P.Name AS ProductName,
@@ -52,6 +58,8 @@ DECLARE @QueryNum INT = 5
 	END
 
 	IF @QueryNum = 4
+	/*Identify all sales representatives who have not been assigned to any customer territory in the
+	last 6 months, using appropriate NULL-awareness in your filter. */
 	BEGIN
 		SELECT 
 		SP.Name AS SalesRepName,
@@ -70,6 +78,8 @@ DECLARE @QueryNum INT = 5
 	END
 
 	IF @QueryNum = 5
+	/* List all orders where the shipping date is more than 14 days after the order date, indicating a
+	delivery delay, filtered by a specific country of your choice.  */
 	BEGIN
 		DECLARE @ShippingDateDifference INT = 14
 		DECLARE @Country NVARCHAR(100) = '%Austria%'
@@ -85,11 +95,12 @@ DECLARE @QueryNum INT = 5
 		INNER JOIN [Product] P ON P.ID = O.ProductID
 		INNER JOIN Customer C ON C.ID = S.CustomerID
 		INNER JOIN Country CC ON CC.ID = C.CountryID
-		WHERE DATEDIFF(DAY, S.OrderDate, S.ShippingDate) > @ShippingDateDifference AND CC.Name LIKE @Country
+		WHERE S.ShippingDate > DATEADD(DAY, 14, S.OrderDate) AND CC.Name LIKE @Country
 		GROUP BY C.Name,CC.Name,S.OrderDate,S.ShippingDate
 	END
 
 	IF @QueryNum = 6
+	/*Find all products where the product name contains the word Pro,Plus, or Max, regardless of case.*/
 	BEGIN
 		SELECT 
 		P.Name,
@@ -98,5 +109,5 @@ DECLARE @QueryNum INT = 5
 		P.ListingPrice,
 		P.Stock FROM Product P
 		INNER JOIN Category C ON C.ID = P.CategoryID
-		WHERE P.Name LIKE '%Pro' OR P.Name LIKE '%Max%' OR P.Name LIKE '%Plus%'
+		WHERE P.Name LIKE '%Pro%' OR P.Name LIKE '%Max%' OR P.Name LIKE '%Plus%'
 	END
