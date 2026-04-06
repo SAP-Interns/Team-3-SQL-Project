@@ -109,11 +109,11 @@ def final_master_seed():
     cursor.execute("SELECT ID FROM SalesRepresentative")
     all_reps = [r[0] for r in cursor.fetchall()]
 
-    cursor.execute("SELECT ID FROM Country")
-    con_ids = [r[0] for r in cursor.fetchall()]
+    cursor.execute("SELECT ID FROM Territory")
+    ter_ids = [r[0] for r in cursor.fetchall()]
     for _ in range(numOfCustomers):
-        cursor.execute("INSERT INTO Customer (Name, BillingAddress, CountryID, CreditLimit, AccountTierID) VALUES (?,?,?,?,?)", 
-                       (fake.company(), fake.street_address().replace('\n', ', '), random.choice(con_ids), random.randint(1, 100000), random.choice(tier_ids)))
+        cursor.execute("INSERT INTO Customer (Name, BillingAddress, TerritoryID, CreditLimit, AccountTierID) VALUES (?,?,?,?,?)", 
+                       (fake.company(), fake.street_address().replace('\n', ', '), random.choice(ter_ids), random.randint(1, 100000), random.choice(tier_ids)))
         c_id = cursor.execute("SELECT @@IDENTITY").fetchone()[0]
         
         # 80% chance to assign reps; 20% chance customer remains unassigned

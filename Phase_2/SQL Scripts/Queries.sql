@@ -1,4 +1,4 @@
-DECLARE @QueryNum INT = 6
+DECLARE @QueryNum INT = 5
 
 	IF @QueryNum = 1
 	/*List all customers in Germany whose account tier is Gold and whose credit limit exceeds
@@ -13,7 +13,9 @@ DECLARE @QueryNum INT = 6
 		A.Name AS AccountTier 
 		FROM Customer C
 		INNER JOIN AccountTier A ON A.ID = C.AccountTierID
-		WHERE A.Name LIKE @Tier AND C.CreditLimit > @CreditLimit
+		INNER JOIN Territory T ON T.ID = C.TerritoryID
+		INNER JOIN Country CC ON CC.ID = T.CountryID
+		WHERE A.Name LIKE @Tier AND C.CreditLimit > @CreditLimit AND CC.Name LIKE '%Germany%'
 		ORDER BY CreditLimit DESC
 	END
 
@@ -94,7 +96,8 @@ DECLARE @QueryNum INT = 6
 		INNER JOIN OrderLineItem O ON O.SaleOrderID = S.ID
 		INNER JOIN [Product] P ON P.ID = O.ProductID
 		INNER JOIN Customer C ON C.ID = S.CustomerID
-		INNER JOIN Country CC ON CC.ID = C.CountryID
+		INNER JOIN Territory T ON T.ID = C.TerritoryID
+		INNER JOIN Country CC ON CC.ID = T.CountryID
 		WHERE S.ShippingDate > DATEADD(DAY, 14, S.OrderDate) AND CC.Name LIKE @Country
 		GROUP BY C.Name,CC.Name,S.OrderDate,S.ShippingDate
 	END

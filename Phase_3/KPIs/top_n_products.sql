@@ -12,7 +12,8 @@ FROM (
     FROM OrderLineItem oli
     INNER JOIN SaleOrder so ON oli.SaleOrderID = so.ID
     INNER JOIN Customer c ON so.CustomerID = c.ID
-    INNER JOIN Country ctry ON c.CountryID = ctry.ID
+    INNER JOIN Territory t on t.id = c.TerritoryID
+    INNER JOIN Country ctry ON ctry.ID = t.CountryID
     INNER JOIN Product p ON oli.ProductID = p.ID
     WHERE so.OrderDate BETWEEN '2025-01-01' AND '2025-12-31'
     GROUP BY ctry.Name, p.Name
