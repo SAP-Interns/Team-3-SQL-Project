@@ -7,7 +7,8 @@ SELECT
 FROM SaleOrder so
 JOIN OrderLineItem oli ON so.id = oli.saleorderid
 JOIN Customer cust ON so.customerid = cust.id
-JOIN Country c ON cust.countryid = c.id
+INNER JOIN Territory t on t.ID = cust.TerritoryID
+JOIN Country c ON c.ID = t.CountryID
 JOIN Region r ON c.regionid = r.id
 GROUP BY 
     ROLLUP (r.name, c.name)
