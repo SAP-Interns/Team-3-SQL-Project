@@ -1,4 +1,4 @@
-DECLARE @QueryNum INT = 2
+DECLARE @QueryNum INT = 1
 
 	IF @QueryNum = 1
 	/*Full Order Summary: Write a query that joins orders, line items, customers, products, regions,
@@ -6,23 +6,29 @@ DECLARE @QueryNum INT = 2
 	relevant attributes. This query will form the foundation of the reporting layer.*/
 	BEGIN
 		SELECT
-		SO.ID AS OrderID,
+		SO.ID AS SaleOrderID,
 		SO.OrderDate,
 		C.Name AS 'Customer Name',
 		SR.Name AS 'Sales Rep',
 		R.Name AS 'Region',
+		CC.Name AS Country,
+		T.Name AS Territory,
 		CASE
-			WHEN MAX(O.PromotionID) IS NULL THEN 'Not on Promotion'
+			WHEN O.PromotionID IS NULL THEN 'Not on Promotion'
 			ELSE 'On Promotion'
 		END AS Promotion,
 		CASE
 			WHEN SO.ShippingDate IS NULL THEN 'Not Delivered'
 			ELSE CAST(SO.ShippingDate AS NVARCHAR(50))
 		END AS 'Shipping Date',
-		SUM(O.TotalPrice) AS 'Total Price',
+		P.Name AS Product,
+		P.UnitCost,
+		O.Quantity,
+		O.UnitPrice,
+		O.TotalPrice,
 		SS.Name AS 'Status'
-		FROM SaleOrder SO
-		INNER JOIN OrderLineItem O ON O.SaleOrderID = SO.ID
+		FROM OrderLineItem O
+		INNER JOIN SaleOrder SO ON SO.ID = O.SaleOrderID
 		INNER JOIN Customer C ON C.ID = SO.CustomerID
 		INNER JOIN SalesRepresentative SR ON SR.ID = SO.SalesRepresentativeID
 		INNER JOIN Product P ON P.ID = O.ProductID
@@ -31,7 +37,6 @@ DECLARE @QueryNum INT = 2
 		INNER JOIN Region R ON R.ID = CC.RegionID
 		INNER JOIN SaleStatus SS ON SS.ID = SO.SaleStatusID
 		LEFT JOIN Promotion PR ON PR.ID = O.PromotionID
-		GROUP BY SO.ID,SO.OrderDate, C.Name, SR.Name, R.Name, SO.ShippingDate, SS.Name
 	END
 
 	IF @QueryNum = 2
@@ -55,31 +60,9 @@ DECLARE @QueryNum INT = 2
 		SR.Name AS 'Sales Rep',
 		C.Name AS 'Customer Name',
 		SO.OrderDate
-		FROM SaleOrder SO
-		INNER JOIN SalesRepresentative SR ON SR.ID = SO.SalesRepresentativeID
-		INNER JOIN Customer C ON C.ID = SO.CustomerID
-		LEFT JOIN Customer_SalesRepresentative CSR ON CSR.SalesRepresentativeID = SR.ID AND CSR.CustomerID = C.ID
+		FROM Customer_SalesRepresentative CSR
+		INNER JOIN SalesRepresentative SR ON SR.ID = CSR.SalesRepresentativeID
+		INNER JOIN Customer C ON C.ID = CSR.CustomerID
+		LEFT JOIN SaleOrder SO ON SO.SalesRepresentativeID = CSR.SalesRepresentativeID AND SO.CustomerID = CSR.CustomerID
 		WHERE CSR.SalesRepresentativeID IS NULL
-	END
-
-	IF @QueryNum = 4
-	/*Revenue by Geography: Join orders, customers, and regions to produce a complete revenue
-	breakdown at Country  Region  Territory level, including subtotals. */
-	BEGIN
-		SELECT 'NOT DONE'
-	END
-
-	IF @QueryNum = 5
-	/* Product Cost vs. Actual Sell Price: Join order line items with products to compute the realized
-	margin on every line item, comparing the actual sell price (after discount) against the product&#39;s
-	unit cost.*/
-	BEGIN
-		SELECT 'NOT DONE'
-	END
-
-	IF @QueryNum = 6
-	/*Unordered Products: Identify all active products that appear in dim_products but have not
-	appeared in any order line item in the last 12 months. These are candidates for discontinuation.*/
-	BEGIN
-		SELECT 'NOT DONE'
 	END
