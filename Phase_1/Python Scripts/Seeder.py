@@ -16,7 +16,7 @@ random.seed(seed)
 # Connection
 conn = pyodbc.connect(
     'DRIVER={ODBC Driver 17 for SQL Server};'
-    'SERVER=localhost;'
+    'SERVER=localhost\SQLEXPRESS;'
     'DATABASE=NordaTrade_GmbH;'
     'Trusted_Connection=yes;'
 )

@@ -3,6 +3,7 @@
 SELECT 
     r.name AS region,
     c.name AS country,
+    t.name as territory,
     SUM(oli.totalprice) AS total_revenue
 FROM SaleOrder so
 JOIN OrderLineItem oli ON so.id = oli.saleorderid
@@ -11,7 +12,7 @@ INNER JOIN Territory t on t.ID = cust.TerritoryID
 JOIN Country c ON c.ID = t.CountryID
 JOIN Region r ON c.regionid = r.id
 GROUP BY 
-    ROLLUP (r.name, c.name)
+    ROLLUP (r.name, c.name,t.name)
 ORDER BY 
     r.name, c.name;
 
