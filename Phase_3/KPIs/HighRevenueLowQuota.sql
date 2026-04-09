@@ -5,11 +5,11 @@ SELECT
     d.Quarter,
     SUM(oli.TotalPrice) AS Revenue,
     (SUM(oli.TotalPrice) / q.TargetAmount) * 100 AS QuotaAttainment
-FROM SaleOrder so
-INNER JOIN OrderLineItem oli ON so.ID = oli.SaleOrderID
-INNER JOIN SalesRepresentative sr ON so.SalesRepresentativeID = sr.ID
-INNER JOIN Quota q ON sr.ID = q.SalesRepresentativeID
-INNER JOIN Date d ON so.OrderDateKey = d.DateKey
+FROM fact_sale_orders so
+INNER JOIN fact_order_line_items oli ON so.ID = oli.SaleOrderID
+INNER JOIN dim_sales_reps sr ON so.SalesRepresentativeID = sr.ID
+INNER JOIN fact_quotas q ON sr.ID = q.SalesRepresentativeID
+INNER JOIN dim_date d ON so.OrderDateKey = d.DateKey
 GROUP BY sr.Name, d.Year, d.Quarter, q.TargetAmount
 HAVING 
     SUM(oli.TotalPrice) > 500000

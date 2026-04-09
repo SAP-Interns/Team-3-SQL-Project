@@ -3,9 +3,9 @@ SELECT
     p.Name AS Product,
     d.Quarter,
     (COUNT(r.ID) * 1.0 / SUM(oli.Quantity)) * 100 AS ReturnRate
-FROM OrderLineItem oli
-INNER JOIN Product p ON oli.ProductID = p.ID
-INNER JOIN SaleOrder so ON oli.SaleOrderID = so.ID
-INNER JOIN Date d ON so.OrderDateKey = d.DateKey
-LEFT JOIN [Return] r ON oli.ID = r.OrderLineItemID
+FROM fact_order_line_items oli
+INNER JOIN dim_products p ON oli.ProductID = p.ID
+INNER JOIN fact_sale_orders so ON oli.SaleOrderID = so.ID
+INNER JOIN dim_date d ON so.OrderDateKey = d.DateKey
+LEFT JOIN fact_returns r ON oli.ID = r.OrderLineItemID
 GROUP BY p.Name, d.Quarter;

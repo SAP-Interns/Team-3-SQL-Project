@@ -11,10 +11,10 @@ DECLARE @QueryNum INT = 5
 		C.BillingAddress,
 		C.CreditLimit,
 		A.Name AS AccountTier 
-		FROM Customer C
-		INNER JOIN AccountTier A ON A.ID = C.AccountTierID
-		INNER JOIN Territory T ON T.ID = C.TerritoryID
-		INNER JOIN Country CC ON CC.ID = T.CountryID
+		FROM dim_customers C
+		INNER JOIN dim_account_tiers A ON A.ID = C.AccountTierID
+		INNER JOIN dim_territories T ON T.ID = C.TerritoryID
+		INNER JOIN dim_countries CC ON CC.ID = T.CountryID
 		WHERE A.Name LIKE @Tier AND C.CreditLimit > @CreditLimit AND CC.Name LIKE '%Germany%'
 		ORDER BY CreditLimit DESC
 	END
@@ -27,11 +27,11 @@ DECLARE @QueryNum INT = 5
 		C.Name AS CustomerName,
 		S.OrderDate,
 		SUM(O.TotalPrice) AS TotalValue
-		FROM SaleOrder S
-		INNER JOIN SaleStatus SS ON SS.ID = S.SaleStatusID
-		INNER JOIN Date D ON D.DateKey = S.OrderDateKey
-		INNER JOIN Customer C ON C.ID = S.CustomerID
-		INNER JOIN OrderLineItem O ON O.SaleOrderID = S.ID
+		FROM fact_sale_orders S
+		INNER JOIN dim_sale_statuses SS ON SS.ID = S.SaleStatusID
+		INNER JOIN dim_date D ON D.DateKey = S.OrderDateKey
+		INNER JOIN dim_customers C ON C.ID = S.CustomerID
+		INNER JOIN fact_order_line_items O ON O.SaleOrderID = S.ID
 		WHERE SS.Name LIKE '%Pending%' AND D.Year = YEAR(GETDATE()) -1 AND D.Quarter = 3
 		GROUP BY C.Name, S.OrderDate
 	END
@@ -51,10 +51,10 @@ DECLARE @QueryNum INT = 5
 			SELECT
 			P.ID,
 			(1-(P.UnitCost / P.ListingPrice)) * 100 AS Margin
-			FROM Product P
+			FROM dim_products P
 		) AS T
-		INNER JOIN Product P ON P.ID = T.ID
-		INNER JOIN Category C ON C.ID = P.CategoryID
+		INNER JOIN dim_products P ON P.ID = T.ID
+		INNER JOIN dim_categories C ON C.ID = P.CategoryID
 		WHERE T.Margin > 66
 		ORDER BY T.Margin DESC
 	END
@@ -67,14 +67,14 @@ DECLARE @QueryNum INT = 5
 		SP.Name AS SalesRepName,
 		R.Name AS Region,
 		SP.StartingDate
-		FROM SalesRepresentative SP
-		INNER JOIN Region R ON R.ID = SP.RegionID
+		FROM dim_sales_reps SP
+		INNER JOIN dim_regions R ON R.ID = SP.RegionID
 		WHERE SP.ID NOT IN 
 		(
 			SELECT 
 			SalesRepresentativeID
-			FROM Customer_SalesRepresentative CS
-			INNER JOIN Date D ON D.DateKey = CS.AssignedDateKey
+			FROM rep_customer_assignments CS
+			INNER JOIN dim_date D ON D.DateKey = CS.AssignedDateKey
 			WHERE D.FullDate >= DATEADD(month, -6, GETDATE())
 		)
 	END
@@ -92,12 +92,12 @@ DECLARE @QueryNum INT = 5
 		S.OrderDate,
 		S.ShippingDate,
 		DATEDIFF(DAY, S.OrderDate, S.ShippingDate) AS DateDifference
-		FROM SaleOrder S
-		INNER JOIN OrderLineItem O ON O.SaleOrderID = S.ID
-		INNER JOIN [Product] P ON P.ID = O.ProductID
-		INNER JOIN Customer C ON C.ID = S.CustomerID
-		INNER JOIN Territory T ON T.ID = C.TerritoryID
-		INNER JOIN Country CC ON CC.ID = T.CountryID
+		FROM fact_sale_orders S
+		INNER JOIN fact_order_line_items O ON O.SaleOrderID = S.ID
+		INNER JOIN [dim_products] P ON P.ID = O.ProductID
+		INNER JOIN dim_customers C ON C.ID = S.CustomerID
+		INNER JOIN dim_territories T ON T.ID = C.TerritoryID
+		INNER JOIN dim_countries CC ON CC.ID = T.CountryID
 		WHERE S.ShippingDate > DATEADD(DAY, 14, S.OrderDate) AND CC.Name LIKE @Country
 		GROUP BY C.Name,CC.Name,S.OrderDate,S.ShippingDate
 	END
@@ -110,7 +110,7 @@ DECLARE @QueryNum INT = 5
 		C.Name AS Category,
 		P.UnitCost,
 		P.ListingPrice,
-		P.Stock FROM Product P
-		INNER JOIN Category C ON C.ID = P.CategoryID
+		P.Stock FROM dim_products P
+		INNER JOIN dim_categories C ON C.ID = P.CategoryID
 		WHERE P.Name LIKE '%Pro%' OR P.Name LIKE '%Max%' OR P.Name LIKE '%Plus%'
 	END

@@ -3,9 +3,9 @@ SELECT
     c.Name,
     COUNT(so.ID) AS TotalOrders,
     SUM(oli.TotalPrice) / COUNT(so.ID) AS AvgOrderValue
-FROM Customer c
-INNER JOIN SaleOrder so ON c.ID = so.CustomerID
-INNER JOIN OrderLineItem oli ON so.ID = oli.SaleOrderID
+FROM dim_customers c
+INNER JOIN fact_sale_orders so ON c.ID = so.CustomerID
+INNER JOIN fact_order_line_items oli ON so.ID = oli.SaleOrderID
 WHERE so.OrderDate >= DATEADD(YEAR, -1, GETDATE())
 GROUP BY c.Name
 HAVING 

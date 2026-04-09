@@ -6,11 +6,11 @@ WITH customer_rfm AS (
         DATEDIFF(day, MAX(o.OrderDate), GETDATE()) AS RecencyDays,
         COUNT(DISTINCT o.ID) AS Frequency,
         SUM(oli.TotalPrice) AS Monetary
-    FROM Customer c
-    LEFT JOIN SaleOrder o 
+    FROM dim_customers c
+    LEFT JOIN fact_sale_orders o 
         ON c.ID = o.CustomerID 
         AND o.OrderDate >= DATEADD(year, -1, GETDATE())
-    LEFT JOIN OrderLineItem oli 
+    LEFT JOIN fact_order_line_items oli 
         ON o.ID = oli.SaleOrderID
     GROUP BY c.ID, c.Name
 )
@@ -37,11 +37,11 @@ WITH monthly_revenue AS (
         YEAR(o.OrderDate) AS SalesYear,
         MONTH(o.OrderDate) AS SalesMonth,
         SUM(oli.TotalPrice) AS NetRevenue
-    FROM SaleOrder o
-    INNER JOIN OrderLineItem oli ON o.ID = oli.SaleOrderID
-    INNER JOIN Customer c  ON o.CustomerID = c.ID
-    INNER JOIN Territory t ON c.TerritoryID = t.ID
-    INNER JOIN Country co ON t.CountryID = co.ID
+    FROM fact_sale_orders o
+    INNER JOIN fact_order_line_items oli ON o.ID = oli.SaleOrderID
+    INNER JOIN dim_customers c  ON o.CustomerID = c.ID
+    INNER JOIN dim_territories t ON c.TerritoryID = t.ID
+    INNER JOIN dim_countries co ON t.CountryID = co.ID
     GROUP BY co.Name, YEAR(o.OrderDate), MONTH(o.OrderDate)
 )
 SELECT
@@ -66,12 +66,12 @@ WITH quarterly_revenue AS (
         YEAR(o.OrderDate) AS SalesYear,
         DATEPART(QUARTER, o.OrderDate) AS SalesQuarter,
         ROUND(SUM(oli.TotalPrice), 2) AS QuarterlyRevenue
-    FROM SaleOrder o
-    INNER JOIN OrderLineItem oli ON o.ID = oli.SaleOrderID
-    INNER JOIN Customer c ON o.CustomerID = c.ID
-    INNER JOIN Territory t ON c.TerritoryID = t.ID
-    INNER JOIN Country co ON t.CountryID = co.ID
-    INNER JOIN Region r ON co.RegionID = r.ID
+    FROM fact_sale_orders o
+    INNER JOIN fact_order_line_items oli ON o.ID = oli.SaleOrderID
+    INNER JOIN dim_customers c ON o.CustomerID = c.ID
+    INNER JOIN dim_territories t ON c.TerritoryID = t.ID
+    INNER JOIN dim_countries co ON t.CountryID = co.ID
+    INNER JOIN dim_regions r ON co.RegionID = r.ID
     GROUP BY 
         r.Name,
         YEAR(o.OrderDate),
@@ -97,11 +97,11 @@ WITH rep_performance AS (
             WHEN SUM(ISNULL(q.TargetAmount, 0)) <= 0 THEN 0.0
             ELSE (SUM(oli.TotalPrice) * 100.0) / (SUM(q.TargetAmount) / 4.0)
         END AS AttainmentPct
-    FROM SalesRepresentative sr
-    INNER JOIN Region r ON sr.RegionID = r.ID
-    INNER JOIN SaleOrder o ON sr.ID = o.SalesRepresentativeID
-    INNER JOIN OrderLineItem oli ON o.ID = oli.SaleOrderID
-    LEFT JOIN Quota q 
+    FROM dim_sales_reps sr
+    INNER JOIN dim_regions r ON sr.RegionID = r.ID
+    INNER JOIN fact_sale_orders o ON sr.ID = o.SalesRepresentativeID
+    INNER JOIN fact_order_line_items oli ON o.ID = oli.SaleOrderID
+    LEFT JOIN fact_quotas q 
         ON sr.ID = q.SalesRepresentativeID 
         AND q.FiscalPeriod = CONCAT('FY', YEAR(DATEADD(quarter, -1, GETDATE())))
     WHERE DATEPART(quarter, o.OrderDate) = DATEPART(quarter, DATEADD(quarter, -1, GETDATE()))
@@ -132,12 +132,12 @@ FROM (
             PARTITION BY co.Name
             ORDER BY SUM(oli.TotalPrice) DESC
         ) AS rn
-    FROM Customer c
-    INNER JOIN AccountTier at ON c.AccountTierID = at.ID
-    INNER JOIN Territory t ON c.TerritoryID = t.ID
-    INNER JOIN Country co ON t.CountryID = co.ID
-    INNER JOIN SaleOrder o ON c.ID = o.CustomerID
-    INNER JOIN OrderLineItem oli ON o.ID = oli.SaleOrderID
+    FROM dim_customers c
+    INNER JOIN dim_account_tiers at ON c.AccountTierID = at.ID
+    INNER JOIN dim_territories t ON c.TerritoryID = t.ID
+    INNER JOIN dim_countries co ON t.CountryID = co.ID
+    INNER JOIN fact_sale_orders o ON c.ID = o.CustomerID
+    INNER JOIN fact_order_line_items oli ON o.ID = oli.SaleOrderID
     WHERE YEAR(o.OrderDate) = YEAR(GETDATE())
     GROUP BY 
         c.ID,
@@ -150,12 +150,12 @@ WHERE rn = 1;
 --6.Finds products that have never been sold in regions generating more than €1M revenue in the past year using a correlated subquery
 WITH high_revenue_regions AS (
     SELECT r.ID AS RegionID
-    FROM Region r
-    JOIN Country co ON r.ID = co.RegionID
-    JOIN Territory t ON co.ID = t.CountryID
-    JOIN Customer c ON t.ID = c.TerritoryID
-    JOIN SaleOrder o ON c.ID = o.CustomerID
-    JOIN OrderLineItem oli ON o.ID = oli.SaleOrderID
+    FROM dim_regions r
+    JOIN dim_countries co ON r.ID = co.RegionID
+    JOIN dim_territories t ON co.ID = t.CountryID
+    JOIN dim_customers c ON t.ID = c.TerritoryID
+    JOIN fact_sale_orders o ON c.ID = o.CustomerID
+    JOIN fact_order_line_items oli ON o.ID = oli.SaleOrderID
     WHERE o.OrderDate >= DATEADD(YEAR, -1, GETDATE())
     GROUP BY r.ID
     HAVING SUM(oli.TotalPrice) > 1000000
@@ -163,14 +163,14 @@ WITH high_revenue_regions AS (
 SELECT 
     p.ID AS ProductID,
     p.Name AS ProductName
-FROM Product p
+FROM dim_products p
 WHERE NOT EXISTS (
     SELECT 1
-    FROM OrderLineItem oli
-    INNER JOIN SaleOrder o ON oli.SaleOrderID = o.ID
-    INNER JOIN Customer c ON o.CustomerID = c.ID
-    INNER JOIN Territory t ON c.TerritoryID = t.ID
-    INNER JOIN Country co ON t.CountryID = co.ID
+    FROM fact_order_line_items oli
+    INNER JOIN fact_sale_orders o ON oli.SaleOrderID = o.ID
+    INNER JOIN dim_customers c ON o.CustomerID = c.ID
+    INNER JOIN dim_territories t ON c.TerritoryID = t.ID
+    INNER JOIN dim_countries co ON t.CountryID = co.ID
     WHERE oli.ProductID = p.ID AND co.RegionID IN (
           SELECT RegionID 
           FROM high_revenue_regions
