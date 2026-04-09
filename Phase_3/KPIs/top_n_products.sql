@@ -15,7 +15,8 @@ FROM (
     INNER JOIN dim_territories t on t.id = c.TerritoryID
     INNER JOIN dim_countries ctry ON ctry.ID = t.CountryID
     INNER JOIN dim_products p ON oli.ProductID = p.ID
-    WHERE so.OrderDate BETWEEN '2025-01-01' AND '2025-12-31'
+    INNER JOIN dim_date d on d.DateKey = so.OrderDateKey
+    WHERE d.Year = YEAR(GETDATE())
     GROUP BY ctry.Name, p.Name
 ) t
 WHERE rnk <= 10;

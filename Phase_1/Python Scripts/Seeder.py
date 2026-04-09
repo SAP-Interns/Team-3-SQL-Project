@@ -71,7 +71,9 @@ def final_master_seed():
     for _ in range(numOfSalesRep):
         cursor.execute("INSERT INTO dim_sales_reps (Name, RegionID, StartingDateKey, StartingDate) VALUES (?, ?, ?, ?)", (fake.name(), random.choice(reg_ids), start_date_key, rep_start_date))
         r_id = cursor.execute("SELECT @@IDENTITY").fetchone()[0]
-        cursor.execute("INSERT INTO fact_quotas (SalesRepresentativeID, TerritoryID, FiscalPeriod, TargetAmount) VALUES (?, ?, 'FY2026', ?)", (r_id, random.choice(t_ids), random.randint(20000,750000)))
+        q_date = date(2026, 6, 30) - timedelta(days=random.randint(0, 200))
+        q_date_key = int(q_date.strftime('%Y%m%d'))
+        cursor.execute("INSERT INTO fact_quotas (SalesRepresentativeID, TerritoryID, DueDateKey, DueDate, TargetAmount) VALUES (?, ?, ?, ?, ?)", (r_id, random.choice(t_ids), q_date_key, q_date, random.randint(20000,750000)))
     conn.commit()
 
     # --- 5. CATEGORIES ---
@@ -182,28 +184,34 @@ def final_master_seed():
             p_id, base_price = random.choice(prods)
             applied_promo_id = None
             final_unit_price = base_price
+            qty = random.randint(1,10)
             
             if p_id in product_promo_map:
                 for promo_id, disc, start, end in product_promo_map[p_id]:
                     if start <= o_date <= end:
                         applied_promo_id = promo_id
-                        final_unit_price = round(base_price * (1 - (disc / 100.0)), 2)
+                        final_unit_price = round(base_price * (1 - (disc / 100.0)), 2)                       
                         break
 
+            totalPrice = final_unit_price * qty            
             cursor.execute("""
                 INSERT INTO fact_order_line_items (SaleOrderID, ProductID, Quantity, UnitPrice, TotalPrice, PromotionID) 
-                OUTPUT INSERTED.ID VALUES (?, ?, 1, ?, ?, ?)""", 
-                (o_id, p_id, final_unit_price, final_unit_price, applied_promo_id))
+                OUTPUT INSERTED.ID, INSERTED.Quantity, INSERTED.TotalPrice
+                VALUES (?, ?, ?, ?, ?, ?)""", 
+                (o_id, p_id, qty, final_unit_price, totalPrice, applied_promo_id))
             
-            line_item_id = cursor.fetchone()[0]
+            row = cursor.fetchone()
+            line_item_id = row[0]
+            returned_qty = row[1]
+            returned_total_price = row[2]
 
             if chosen_status_id == status_map['Cancelled']:
                 ret_date = o_date + timedelta(days=random.randint(0, 2))
                 ret_date_key = int(ret_date.strftime('%Y%m%d'))
                 
                 cursor.execute("""
-                    INSERT INTO [fact_returns] (OrderLineItemID, ReturnDateKey, ReturnDate, ReturnReasonID) 
-                    VALUES (?, ?, ?, ?)""", (line_item_id, ret_date_key, ret_date, reason_map['Not Satisfied']))
+                    INSERT INTO [fact_returns] (OrderLineItemID, ReturnDateKey, ReturnDate, ReturnReasonID, ReturnQuantity, CreditAmount) 
+                    VALUES (?, ?, ?, ?, ?, ?)""", (line_item_id, ret_date_key, ret_date, reason_map['Not Satisfied'], returned_qty, returned_total_price))
         
         if i % 2500 == 0:
             print(f"--- {i} orders processed...")

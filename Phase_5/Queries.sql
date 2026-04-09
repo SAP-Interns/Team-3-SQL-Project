@@ -87,33 +87,44 @@ FROM quarterly_revenue
 ORDER BY RegionName, SalesYear, SalesQuarter;
 
 --4.Ranks sales representatives within each region based on quota attainment percentage for the most recent completed quarter
-WITH rep_performance AS (
+WITH RepRevenue AS (
     SELECT 
+        sr.ID AS RepID,
         sr.Name AS RepName,
         r.Name AS RegionName,
-        SUM(ISNULL(q.TargetAmount, 0)) / 4.0 AS QuarterlyQuotaTarget, 
-        SUM(oli.TotalPrice) AS ActualRevenue,
-        CASE 
-            WHEN SUM(ISNULL(q.TargetAmount, 0)) <= 0 THEN 0.0
-            ELSE (SUM(oli.TotalPrice) * 100.0) / (SUM(q.TargetAmount) / 4.0)
-        END AS AttainmentPct
+        SUM(oli.TotalPrice) AS ActualRevenue
     FROM dim_sales_reps sr
     INNER JOIN dim_regions r ON sr.RegionID = r.ID
     INNER JOIN fact_sale_orders o ON sr.ID = o.SalesRepresentativeID
     INNER JOIN fact_order_line_items oli ON o.ID = oli.SaleOrderID
-    LEFT JOIN fact_quotas q 
-        ON sr.ID = q.SalesRepresentativeID 
-        AND q.FiscalPeriod = CONCAT('FY', YEAR(DATEADD(quarter, -1, GETDATE())))
-    WHERE DATEPART(quarter, o.OrderDate) = DATEPART(quarter, DATEADD(quarter, -1, GETDATE()))
-      AND YEAR(o.OrderDate) = YEAR(DATEADD(quarter, -1, GETDATE()))
+    INNER JOIN dim_date d on d.DateKey = o.OrderDateKey
+    WHERE d.Quarter = DATEPART(quarter, DATEADD(quarter, -1, GETDATE()))
+      AND d.Year = YEAR(DATEADD(quarter, -1, GETDATE()))
     GROUP BY sr.ID, sr.Name, r.Name
+),
+RepPerformance AS (
+    SELECT 
+        rr.RepName,
+        rr.RegionName,
+        q.TargetAmount AS QuarterlyQuotaTarget,
+        rr.ActualRevenue,
+        CASE 
+            WHEN ISNULL(q.TargetAmount, 0) <= 0 THEN 0.0
+            ELSE (rr.ActualRevenue * 100.0) / q.TargetAmount 
+        END AS AttainmentPct
+    FROM RepRevenue rr
+    LEFT JOIN fact_quotas q ON rr.RepID = q.SalesRepresentativeID
+    INNER JOIN dim_date d ON d.DateKey = q.DueDateKey
+    WHERE d.Quarter >= DATEPART(quarter, DATEADD(quarter, -1, GETDATE()))
+      AND d.Year = YEAR(DATEADD(quarter, -1, GETDATE()))
 )
 SELECT 
     RANK() OVER (PARTITION BY RegionName ORDER BY AttainmentPct DESC) AS RegionalRank,
     RepName,
-    ROUND(AttainmentPct * 100, 1) AS [Attainment %],
-    ROUND(AVG(AttainmentPct) OVER (PARTITION BY RegionName) * 100, 1) AS [Region Avg %]
-FROM rep_performance;
+    RegionName,
+    ROUND(AttainmentPct, 1) AS [Attainment %],
+    ROUND(AVG(AttainmentPct) OVER (PARTITION BY RegionName), 1) AS [Region Avg %]
+FROM RepPerformance;
 
 
 --5.Identifies the highest-revenue customer in each country for the current year using row-based ranking

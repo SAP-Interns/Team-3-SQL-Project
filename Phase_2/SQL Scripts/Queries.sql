@@ -32,7 +32,7 @@ DECLARE @QueryNum INT = 5
 		INNER JOIN dim_date D ON D.DateKey = S.OrderDateKey
 		INNER JOIN dim_customers C ON C.ID = S.CustomerID
 		INNER JOIN fact_order_line_items O ON O.SaleOrderID = S.ID
-		WHERE SS.Name LIKE '%Pending%' AND D.Year = YEAR(GETDATE()) -1 AND D.Quarter = 3
+		WHERE SS.Name LIKE '%Pending%' OR SS.Name LIKE '%Partially Delivered%' AND D.Year = YEAR(GETDATE()) -1 AND D.Quarter = 3
 		GROUP BY C.Name, S.OrderDate
 	END
 
@@ -72,10 +72,10 @@ DECLARE @QueryNum INT = 5
 		WHERE SP.ID NOT IN 
 		(
 			SELECT 
-			SalesRepresentativeID
+			DISTINCT(SalesRepresentativeID)
 			FROM rep_customer_assignments CS
 			INNER JOIN dim_date D ON D.DateKey = CS.AssignedDateKey
-			WHERE D.FullDate >= DATEADD(month, -6, GETDATE())
+			WHERE D.FullDate >= DATEADD(month, -6, GETDATE()) AND CS.IsActive = 1
 		)
 	END
 
