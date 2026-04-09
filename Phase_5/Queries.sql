@@ -88,7 +88,7 @@ ORDER BY RegionName, SalesYear, SalesQuarter;
 
 --4.Ranks sales representatives within each region based on quota attainment percentage for the most recent completed quarter
 WITH RepRevenue AS (
-    SELECT 
+    SELECT
         sr.ID AS RepID,
         sr.Name AS RepName,
         r.Name AS RegionName,
@@ -115,8 +115,9 @@ RepPerformance AS (
     FROM RepRevenue rr
     LEFT JOIN fact_quotas q ON rr.RepID = q.SalesRepresentativeID
     INNER JOIN dim_date d ON d.DateKey = q.DueDateKey
-    WHERE d.Quarter >= DATEPART(quarter, DATEADD(quarter, -1, GETDATE()))
+    WHERE d.Quarter = DATEPART(quarter, DATEADD(quarter, -1, GETDATE()))
       AND d.Year = YEAR(DATEADD(quarter, -1, GETDATE()))
+      AND d.FullDate BETWEEN q.StartDate AND q.DueDate
 )
 SELECT 
     RANK() OVER (PARTITION BY RegionName ORDER BY AttainmentPct DESC) AS RegionalRank,

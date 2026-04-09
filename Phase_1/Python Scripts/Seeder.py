@@ -24,7 +24,7 @@ conn = pyodbc.connect(
 cursor = conn.cursor()
 
 def final_master_seed():
-    print("Starting Final Master Seed...")
+    print("Starting Seed...")
     
     clean()
 
@@ -73,7 +73,9 @@ def final_master_seed():
         r_id = cursor.execute("SELECT @@IDENTITY").fetchone()[0]
         q_date = date(2026, 6, 30) - timedelta(days=random.randint(0, 200))
         q_date_key = int(q_date.strftime('%Y%m%d'))
-        cursor.execute("INSERT INTO fact_quotas (SalesRepresentativeID, TerritoryID, DueDateKey, DueDate, TargetAmount) VALUES (?, ?, ?, ?, ?)", (r_id, random.choice(t_ids), q_date_key, q_date, random.randint(20000,750000)))
+        q_start_date = q_date - timedelta(days=180)
+        q_start_date_key = int(q_start_date.strftime('%Y%m%d'))
+        cursor.execute("INSERT INTO fact_quotas (SalesRepresentativeID, TerritoryID, DueDateKey, DueDate, StartDateKey, StartDate, TargetAmount) VALUES (?, ?, ?, ?, ?, ?, ?)", (r_id, random.choice(t_ids), q_date_key, q_date, q_start_date_key, q_start_date, random.randint(20000,750000)))
     conn.commit()
 
     # --- 5. CATEGORIES ---

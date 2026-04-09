@@ -14,7 +14,7 @@ def clean():
     cursor = conn.cursor()
 
     # --- STEP 1: CLEANUP ---
-    print("Cleaning database with new naming standard...")
+    print("Cleaning database")
     cursor.execute("EXEC sp_MSforeachtable 'ALTER TABLE ? NOCHECK CONSTRAINT ALL'")
     
     tables = [
