@@ -13,7 +13,6 @@ CREATE VIEW [dbo].[vw_sales_executive_summary] AS
     OrderCount,
     TotalRevenue / NULLIF(OrderCount, 0) AS AvgOrderValue
     FROM [dbo].[vw_summary_regional_metrics]
-    ORDER BY year ASC, Quarter ASC
 GO
 
 
