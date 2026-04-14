@@ -69,13 +69,11 @@ DECLARE @QueryNum INT = 5
 		SP.StartingDate
 		FROM dim_sales_reps SP
 		INNER JOIN dim_regions R ON R.ID = SP.RegionID
-		WHERE SP.ID NOT IN 
-		(
-			SELECT 
-			DISTINCT(SalesRepresentativeID)
+		WHERE NOT EXISTS (
+			SELECT 1
 			FROM rep_customer_assignments CS
 			INNER JOIN dim_date D ON D.DateKey = CS.AssignedDateKey
-			WHERE D.FullDate >= DATEADD(month, -6, GETDATE()) AND CS.IsActive = 1
+			WHERE D.FullDate >= DATEADD(month, -6, GETDATE()) AND CS.IsActive = 1 AND CS.SalesRepresentativeID = SP.ID
 		)
 	END
 
@@ -94,7 +92,7 @@ DECLARE @QueryNum INT = 5
 		DATEDIFF(DAY, S.OrderDate, S.ShippingDate) AS DateDifference
 		FROM fact_sale_orders S
 		INNER JOIN fact_order_line_items O ON O.SaleOrderID = S.ID
-		INNER JOIN [dim_products] P ON P.ID = O.ProductID
+		INNER JOIN dim_products P ON P.ID = O.ProductID
 		INNER JOIN dim_customers C ON C.ID = S.CustomerID
 		INNER JOIN dim_territories T ON T.ID = C.TerritoryID
 		INNER JOIN dim_countries CC ON CC.ID = T.CountryID
